@@ -50,6 +50,17 @@ d["b"] = [0,0,0]
 @test LMDB.list_dirs(d,prefix="aa/") == ["aa/a", "aa/b", "aa/c"]
 @test LMDB.valuesize(d,prefix="aa/") == sizeof(Float32)*18
 
+@testset "Vector value owns its memory (#41)" begin
+    mktempdir() do dir
+        d = LMDBDict{String, Vector{Float32}}(dir)
+        d["k"] = Float32[1,2,3,4]
+        v = d["k"]
+        close(d)
+        GC.gc(); GC.gc()
+        @test v == Float32[1,2,3,4]
+    end
+end
+
 @testset "String -> Int64 round-trip (#46)" begin
     mktempdir() do dir
         d = LMDBDict{String, Int64}(dir)
