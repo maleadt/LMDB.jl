@@ -23,7 +23,7 @@ function LMDBDict{K,V}(path::String; readonly = false, rdahead=false) where {K,V
     end
     LMDBDict{K,V}(env, dbi)
 end
-LMDBDict(path::String; kwargs...) = LMDBDict{String, Vector{Uint8}}(path; kwargs...)
+LMDBDict(path::String; kwargs...) = LMDBDict{String, Vector{UInt8}}(path; kwargs...)
 Base.keytype(::LMDBDict{K}) where K = K
 Base.eltype(::LMDBDict{<:Any,V}) where V = V
 function Base.close(d::LMDBDict)
