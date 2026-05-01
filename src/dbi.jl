@@ -60,27 +60,33 @@ toref(v::Ptr{Nothing}) = v
 
 "Store items into a database"
 function put!(txn::Transaction, dbi::DBI, key, val; flags::Cuint = zero(Cuint))
-    mdb_key_ref = Ref(MDBValue(toref(key)))
-    mdb_val_ref = Ref(MDBValue(toref(val)))
-    check(mdb_put(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref, flags))
+    rkey = toref(key)
+    rval = toref(val)
+    GC.@preserve rkey rval begin
+        mdb_key_ref = Ref(MDBValue(rkey))
+        mdb_val_ref = Ref(MDBValue(rval))
+        check(mdb_put(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref, flags))
+    end
 end
 
 "Delete items from a database"
 function delete!(txn::Transaction, dbi::DBI, key, val=C_NULL)
-    mdb_key_ref = Ref(MDBValue(toref(key)))
-    mdb_val_ref = val === C_NULL ? Ref(MDBValue()) : Ref(MDBValue(toref(val)))
-
-    check(mdb_del(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
+    rkey = toref(key)
+    rval = val === C_NULL ? nothing : toref(val)
+    GC.@preserve rkey rval begin
+        mdb_key_ref = Ref(MDBValue(rkey))
+        mdb_val_ref = rval === nothing ? Ref(MDBValue()) : Ref(MDBValue(rval))
+        check(mdb_del(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
+    end
 end
 
 "Get items from a database"
 function get(txn::Transaction, dbi::DBI, key, ::Type{T}) where T
-    mdb_key_ref = Ref(MDBValue(toref(key)))
-    mdb_val_ref = Ref(MDBValue())
-
-    # Get value
-    check(mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
-
-    # Convert to proper type
-    return mbd_unpack(T, mdb_val_ref)
+    rkey = toref(key)
+    GC.@preserve rkey begin
+        mdb_key_ref = Ref(MDBValue(rkey))
+        mdb_val_ref = Ref(MDBValue())
+        check(mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
+        return mbd_unpack(T, mdb_val_ref)
+    end
 end
