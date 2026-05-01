@@ -111,6 +111,10 @@ function setindex!(env::Environment, val::Integer, option::Symbol)
         check(mdb_env_set_mapsize(env, Csize_t(val)))
     elseif option == :DBs
         check(mdb_env_set_maxdbs(env, Cuint(val)))
+    elseif option == :Flags
+        # Note: a few flags (e.g. MDB_RDONLY) can only be set via `open`.
+        # mdb_env_set_flags rejects those with EINVAL after the env is open.
+        set!(env, Cuint(val))
     else
         @warn("Cannot set $(string(option)) value")
         Cint(0)

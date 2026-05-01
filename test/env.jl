@@ -28,6 +28,12 @@ module LMDB_Env
     big = Csize_t(8) * 1024^3  # 8 GiB
     @test (env[:MapSize] = big) == big
 
+    # Setting :Flags via setindex! used to fall through to a warning (#24).
+    @test !isflagset(env[:Flags], Cuint(LMDB.MDB_NOSYNC))
+    env[:Flags] = LMDB.MDB_NOSYNC
+    @test isflagset(env[:Flags], Cuint(LMDB.MDB_NOSYNC))
+    unset!(env, LMDB.MDB_NOSYNC)
+
     # open db
     isdir(dbname) || mkdir(dbname)
     try
