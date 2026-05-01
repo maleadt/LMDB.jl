@@ -50,6 +50,18 @@ d["b"] = [0,0,0]
 @test LMDB.list_dirs(d,prefix="aa/") == ["aa/a", "aa/b", "aa/c"]
 @test LMDB.valuesize(d,prefix="aa/") == sizeof(Float32)*18
 
+@testset "env kwargs in LMDBDict ctor (#45)" begin
+    mktempdir() do dir
+        big = Csize_t(8) * 1024^3  # 8 GiB
+        d = LMDBDict{String, Int64}(dir; mapsize=big, readers=42, dbs=4)
+        @test d.env[:Readers] == 42
+        @test LMDB.info(d.env).me_mapsize == big
+        d["x"] = 1
+        @test d["x"] === Int64(1)
+        close(d)
+    end
+end
+
 @testset "double close is a no-op (#42)" begin
     mktempdir() do dir
         d = LMDBDict{String,Int}(dir)
