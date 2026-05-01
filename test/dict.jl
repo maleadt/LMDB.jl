@@ -50,6 +50,19 @@ d["b"] = [0,0,0]
 @test LMDB.list_dirs(d,prefix="aa/") == ["aa/a", "aa/b", "aa/c"]
 @test LMDB.valuesize(d,prefix="aa/") == sizeof(Float32)*18
 
+@testset "String -> Int64 round-trip (#46)" begin
+    mktempdir() do dir
+        d = LMDBDict{String, Int64}(dir)
+        d["aa"] = 2
+        d["ab"] = 3
+        d["ac"] = 2
+        @test d["aa"] === Int64(2)
+        @test d["ab"] === Int64(3)
+        @test d["ac"] === Int64(2)
+        @test collect(d) == ["aa"=>2, "ab"=>3, "ac"=>2]
+    end
+end
+
 @testset "Tests for get and get!" begin
     mktempdir() do dir
         d = LMDBDict{String, String}(dir)
