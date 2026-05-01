@@ -50,6 +50,16 @@ d["b"] = [0,0,0]
 @test LMDB.list_dirs(d,prefix="aa/") == ["aa/a", "aa/b", "aa/c"]
 @test LMDB.valuesize(d,prefix="aa/") == sizeof(Float32)*18
 
+@testset "double close is a no-op (#42)" begin
+    mktempdir() do dir
+        d = LMDBDict{String,Int}(dir)
+        d["a"] = 1
+        close(d)
+        # Second close (e.g. from finalizer after explicit close) must not throw.
+        @test (close(d); true)
+    end
+end
+
 @testset "Vector value owns its memory (#41)" begin
     mktempdir() do dir
         d = LMDBDict{String, Vector{Float32}}(dir)

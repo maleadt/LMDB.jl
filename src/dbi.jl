@@ -32,9 +32,11 @@ end
 
 "Close a database handle"
 function close(env::Environment, dbi::DBI)
-    if !isopen(env)
-        @warn("Environment is closed")
-    end
+    # Silently no-op if either the env or the dbi is already closed. The env's
+    # finalizer cascades through dbi handles, and LMDBDict's finalizer may run
+    # after an explicit close — neither path should error.
+    isopen(env) || return
+    isopen(dbi) || return
     mdb_dbi_close(env, dbi)
     dbi.handle = zero(Cuint)
     return

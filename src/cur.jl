@@ -29,9 +29,7 @@ end
 
 "Close a cursor"
 function close(cur::Cursor)
-    if cur.handle == C_NULL
-        @warn("Cursor is already closed")
-    end
+    cur.handle == C_NULL && return
     mdb_cursor_close(cur)
     cur.handle = C_NULL
     return
