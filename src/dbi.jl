@@ -13,7 +13,7 @@ isopen(dbi::DBI) = dbi.handle != zero(Cuint)
 function open(txn::Transaction, dbname::String = ""; flags::Cuint = zero(Cuint))
     cdbname = length(dbname) > 0 ? dbname : Ptr{Cchar}(C_NULL)
     handle = Ref{MDB_dbi}()
-    mdb_dbi_open(txn.handle, cdbname, flags, handle)
+    check(mdb_dbi_open(txn.handle, cdbname, flags, handle))
     return DBI(handle[], dbname)
 end
 
@@ -33,7 +33,7 @@ function close(env::Environment, dbi::DBI)
     if !isopen(env)
         @warn("Environment is closed")
     end
-    _mdb_dbi_close(env.handle, dbi.handle)
+    mdb_dbi_close(env.handle, dbi.handle)
     dbi.handle = zero(Cuint)
     return
 end
@@ -41,7 +41,7 @@ end
 "Retrieve the DB flags for a database handle"
 function flags(txn::Transaction, dbi::DBI)
     flags = Ref{Cuint}(0)
-    mdb_dbi_flags(txn.handle, dbi.handle, flags)
+    check(mdb_dbi_flags(txn.handle, dbi.handle, flags))
     return flags[]
 end
 
@@ -52,7 +52,7 @@ DB will be deleted from the environment and DB handle will be closed
 """
 function drop(txn::Transaction, dbi::DBI; delete = false)
     del = Cint(delete)
-    mdb_drop(txn.handle, dbi.handle, del)
+    check(mdb_drop(txn.handle, dbi.handle, del))
 end
 
 toref(v) = isbitstype(typeof(v)) ? [v] : v
@@ -62,8 +62,7 @@ toref(v::Ptr{Nothing}) = v
 function put!(txn::Transaction, dbi::DBI, key, val; flags::Cuint = zero(Cuint))
     mdb_key_ref = Ref(MDBValue(toref(key)))
     mdb_val_ref = Ref(MDBValue(toref(val)))
-    r = mdb_put(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref, flags)
-    r
+    check(mdb_put(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref, flags))
 end
 
 "Delete items from a database"
@@ -71,7 +70,7 @@ function delete!(txn::Transaction, dbi::DBI, key, val=C_NULL)
     mdb_key_ref = Ref(MDBValue(toref(key)))
     mdb_val_ref = val === C_NULL ? Ref(MDBValue()) : Ref(MDBValue(toref(val)))
 
-    mdb_del(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+    check(mdb_del(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
 end
 
 "Get items from a database"
@@ -80,7 +79,7 @@ function get(txn::Transaction, dbi::DBI, key, ::Type{T}) where T
     mdb_val_ref = Ref(MDBValue())
 
     # Get value
-    mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+    check(mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref))
 
     # Convert to proper type
     return mbd_unpack(T, mdb_val_ref)

@@ -11,7 +11,7 @@ isopen(cur::Cursor) = cur.handle != C_NULL
 "Create a cursor"
 function open(txn::Transaction, dbi::DBI)
     cur_ptr_ref = Ref{Ptr{MDB_cursor}}(C_NULL)
-    mdb_cursor_open(txn.handle, dbi.handle, cur_ptr_ref)
+    check(mdb_cursor_open(txn.handle, dbi.handle, cur_ptr_ref))
     return Cursor(cur_ptr_ref[])
 end
 
@@ -30,26 +30,26 @@ function close(cur::Cursor)
     if cur.handle == C_NULL
         @warn("Cursor is already closed")
     end
-    _mdb_cursor_close(cur.handle)
+    mdb_cursor_close(cur.handle)
     cur.handle = C_NULL
     return
 end
 
 "Renew a cursor"
 function renew(txn::Transaction, cur::Cursor)
-    mdb_cursor_renew(txn.handle, cur.handle)
+    check(mdb_cursor_renew(txn.handle, cur.handle))
 end
 
 "Return the cursor's transaction"
 function transaction(cur::Cursor)
-    txn_ptr = _mdb_cursor_txn(cur.handle)
+    txn_ptr = mdb_cursor_txn(cur.handle)
     (txn_ptr == C_NULL) && return nothing
     return Transaction(txn_ptr)
 end
 
 "Return the cursor's database"
 function database(cur::Cursor)
-    dbi = _mdb_cursor_dbi(cur.handle)
+    dbi = mdb_cursor_dbi(cur.handle)
     (dbi == 0) && return nothing
     return DBI(dbi, "")
 end
@@ -88,7 +88,7 @@ function Base.iterate(iter::LMDBIterator, refs)
     # Setup parameters
     mdb_key_ref, mdb_val_ref, cursor_op = refs
 
-    ret = _mdb_cursor_get(iter.cur.handle, mdb_key_ref, mdb_val_ref, cursor_op)
+    ret = mdb_cursor_get(iter.cur.handle, mdb_key_ref, mdb_val_ref, cursor_op)
 
     if ret == 0
         #Check if we are still in key prefix
@@ -162,7 +162,7 @@ function get(cur::Cursor, key, ::Type{T}, op::MDB_cursor_op=MDB_SET_KEY) where T
     mdb_val_ref = Ref(MDBValue())
 
     # Get value
-    mdb_cursor_get(cur.handle, mdb_key_ref, mdb_val_ref, op)
+    check(mdb_cursor_get(cur.handle, mdb_key_ref, mdb_val_ref, op))
 
     # Convert to proper type
     return mbd_unpack(T, mdb_val_ref)
@@ -176,17 +176,17 @@ function put!(cur::Cursor, key, val; flags::Cuint = zero(Cuint))
     mdb_key_ref = Ref(MDBValue(toref(key)))
     mdb_val_ref = Ref(MDBValue(toref(val)))
 
-    mdb_cursor_put(cur.handle, mdb_key_ref, mdb_val_ref, flags)
+    check(mdb_cursor_put(cur.handle, mdb_key_ref, mdb_val_ref, flags))
 end
 
 "Delete current key/data pair to which the cursor refers"
 function delete!(cur::Cursor; flags::Cuint = zero(Cuint))
-    mdb_cursor_del(cur.handle, flags)
+    check(mdb_cursor_del(cur.handle, flags))
 end
 
 "Return count of duplicates for current key"
 function count(cur::Cursor)
     countp = Ref(Csize_t(0))
-    mdb_cursor_count(cur.handle, countp)
+    check(mdb_cursor_count(cur.handle, countp))
     return Int(countp[])
 end

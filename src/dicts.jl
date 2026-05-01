@@ -89,8 +89,7 @@ function Base.haskey(d::LMDBDict{K}, key) where K
     txn_dbi_do(d, readonly = true) do txn, dbi
         mdb_key_ref = Ref(MDBValue(toref(convert(K,key))))
         mdb_val_ref = Ref(MDBValue())
-        # Get value
-        ret = _mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+        ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
         if ret == MDB_NOTFOUND
             return false
         elseif ret == Cint(0)
@@ -105,8 +104,7 @@ function Base.get(d::LMDBDict{K,V}, key, default) where {K,V}
     txn_dbi_do(d, readonly = true) do txn, dbi
         mdb_key_ref = Ref(MDBValue(toref(convert(K,key))))
         mdb_val_ref = Ref(MDBValue())
-        # Get value
-        ret = _mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+        ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
         if ret == MDB_NOTFOUND
             return default
         elseif ret == Cint(0)
@@ -121,8 +119,7 @@ function Base.get!(d::LMDBDict{K,V}, key, default) where {K,V}
     txn_dbi_do(d, readonly = true) do txn, dbi
         mdb_key_ref = Ref(MDBValue(toref(convert(K,key))))
         mdb_val_ref = Ref(MDBValue())
-        # Get value
-        ret = _mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+        ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
         if ret == MDB_NOTFOUND
             d[key] = default
             return default
@@ -138,8 +135,7 @@ function Base.get(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Typ
     txn_dbi_do(d, readonly = true) do txn, dbi
         mdb_key_ref = Ref(MDBValue(toref(convert(K,key))))
         mdb_val_ref = Ref(MDBValue())
-        # Get value
-        ret = _mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+        ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
         if ret == MDB_NOTFOUND
             default = f()
             return default
@@ -155,8 +151,7 @@ function Base.get!(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Ty
     txn_dbi_do(d, readonly = true) do txn, dbi
         mdb_key_ref = Ref(MDBValue(toref(convert(K,key))))
         mdb_val_ref = Ref(MDBValue())
-        # Get value
-        ret = _mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+        ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
         if ret == MDB_NOTFOUND
             default = f()
             d[key] = default

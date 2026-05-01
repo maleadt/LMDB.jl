@@ -27,11 +27,11 @@ end
 Function returns tuple `(VersionNumber, String)` that contains a library version and a library version string.
 """
 function version()
-    major = Cint[0]
-    minor = Cint[0]
-    patch = Cint[0]
-    ver_str = _mdb_version(major, minor, patch)
-    return VersionNumber(major[1],minor[1],patch[1]), unsafe_string(ver_str)
+    major = Ref{Cint}()
+    minor = Ref{Cint}()
+    patch = Ref{Cint}()
+    ver_str = mdb_version(major, minor, patch)
+    return VersionNumber(major[], minor[], patch[]), unsafe_string(ver_str)
 end
 
 """Return a string describing a given error code
@@ -40,7 +40,7 @@ Function returns description of the error as a string. It accepts following argu
 * `err::Int32`: An error code.
 """
 function errormsg(err::Cint)
-    errstr = _mdb_strerror(err)
+    errstr = mdb_strerror(err)
     return unsafe_string(errstr)
 end
 
