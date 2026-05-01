@@ -24,6 +24,10 @@ module LMDB_Env
     @test (env[:DBs] = 10) == 10
     @test env[:Readers] == 100
 
+    # MapSize must accept values that don't fit in Cuint (#38, PR #37, #40).
+    big = Csize_t(8) * 1024^3  # 8 GiB
+    @test (env[:MapSize] = big) == big
+
     # open db
     isdir(dbname) || mkdir(dbname)
     try

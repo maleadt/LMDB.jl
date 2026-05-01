@@ -103,19 +103,20 @@ unset!(env::Environment, flag::EnvironmentFlags) = unset!(env, Cuint(flag))
 
 **Note:** Consult LMDB documentation for particual values of environment parameters and flags.
 """
-function setindex!(env::Environment, val::Cuint, option::Symbol)
+function setindex!(env::Environment, val::Integer, option::Symbol)
     if option == :Readers
-        check(mdb_env_set_maxreaders(env, val))
+        check(mdb_env_set_maxreaders(env, Cuint(val)))
     elseif option == :MapSize
-        check(mdb_env_set_mapsize(env, val))
+        # The C signature is `size_t`; using Cuint here capped maps at 4 GiB.
+        check(mdb_env_set_mapsize(env, Csize_t(val)))
     elseif option == :DBs
-        check(mdb_env_set_maxdbs(env, val))
+        check(mdb_env_set_maxdbs(env, Cuint(val)))
     else
         @warn("Cannot set $(string(option)) value")
         Cint(0)
     end
+    val
 end
-setindex!(env::Environment, val::Int, option::Symbol) = setindex!(env, Cuint(val), option)
 
 """Get environment flags and parameters
 
