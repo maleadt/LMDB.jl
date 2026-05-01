@@ -8,6 +8,8 @@ mutable struct Environment
     Environment(h::Ptr{MDB_env}) = new(h, "")
 end
 
+Base.unsafe_convert(::Type{Ptr{MDB_env}}, e::Environment) = e.handle
+
 "Return the path that was used in `open`"
 path(env::Environment) = env.path
 
@@ -43,7 +45,7 @@ end
 """
 function open(env::Environment, path::String; flags::Cuint=zero(Cuint), mode::mode_t = mode_t(0o755))
     env.path = path
-    check(mdb_env_open(env.handle, path, flags, mode))
+    check(mdb_env_open(env, path, flags, mode))
 end
 
 "Wrapper of `open` for `do` construct"
@@ -62,7 +64,7 @@ function close(env::Environment)
     if env.handle == C_NULL
         throw(LMDBError(-1, "Environment is already closed"))
     end
-    mdb_env_close(env.handle)
+    mdb_env_close(env)
     env.handle = C_NULL
     env.path = ""
     return zero(Cint)
@@ -71,20 +73,20 @@ end
 """Flush the data buffers to disk"""
 function sync(env::Environment, force::Bool = false)
     fval = force ? 1 : 0
-    check(mdb_env_sync(env.handle, fval))
+    check(mdb_env_sync(env, fval))
     return zero(Cint)
 end
 
 """Set environment flags"""
 function set!(env::Environment, flag::Cuint)
-    check(mdb_env_set_flags(env.handle, flag, one(Cint)))
+    check(mdb_env_set_flags(env, flag, one(Cint)))
     return flag
 end
 set!(env::Environment, flag::EnvironmentFlags) = set!(env, Cuint(flag))
 
 """Unset environment flags"""
 function unset!(env::Environment, flag::Cuint)
-    check(mdb_env_set_flags(env.handle, flag, zero(Cint)))
+    check(mdb_env_set_flags(env, flag, zero(Cint)))
     return flag
 end
 unset!(env::Environment, flag::EnvironmentFlags) = unset!(env, Cuint(flag))
@@ -105,11 +107,11 @@ unset!(env::Environment, flag::EnvironmentFlags) = unset!(env, Cuint(flag))
 """
 function setindex!(env::Environment, val::Cuint, option::Symbol)
     if option == :Readers
-        check(mdb_env_set_maxreaders(env.handle, val))
+        check(mdb_env_set_maxreaders(env, val))
     elseif option == :MapSize
-        check(mdb_env_set_mapsize(env.handle, val))
+        check(mdb_env_set_mapsize(env, val))
     elseif option == :DBs
-        check(mdb_env_set_maxdbs(env.handle, val))
+        check(mdb_env_set_maxdbs(env, val))
     else
         @warn("Cannot set $(string(option)) value")
         Cint(0)
@@ -131,11 +133,11 @@ setindex!(env::Environment, val::Int, option::Symbol) = setindex!(env, Cuint(val
 function getindex(env::Environment, option::Symbol)
     value = Ref{Cuint}(0)
     if option == :Flags
-        check(mdb_env_get_flags(env.handle, value))
+        check(mdb_env_get_flags(env, value))
     elseif option == :Readers
-        check(mdb_env_get_maxreaders(env.handle, value))
+        check(mdb_env_get_maxreaders(env, value))
     elseif option == :KeySize
-        value[] = mdb_env_get_maxkeysize(env.handle)
+        value[] = mdb_env_get_maxkeysize(env)
     else
         @warn("Cannot get $(string(option)) value")
     end
@@ -146,7 +148,7 @@ end
 function info(env::Environment)
     ei_ref = Ref{MDB_envinfo}()
     !isopen(env) && return MDB_envinfo(C_NULL, 0, 0, 0, 0, 0)
-    check(mdb_env_info(env.handle, ei_ref))
+    check(mdb_env_info(env, ei_ref))
     return ei_ref[]
 end
 

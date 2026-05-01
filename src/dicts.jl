@@ -91,7 +91,7 @@ function Base.haskey(d::LMDBDict{K}, key) where K
         GC.@preserve rkey begin
             mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
             if ret == MDB_NOTFOUND
                 return false
             elseif ret == Cint(0)
@@ -109,7 +109,7 @@ function Base.get(d::LMDBDict{K,V}, key, default) where {K,V}
         GC.@preserve rkey begin
             mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
             if ret == MDB_NOTFOUND
                 return default
             elseif ret == Cint(0)
@@ -127,7 +127,7 @@ function Base.get!(d::LMDBDict{K,V}, key, default) where {K,V}
         GC.@preserve rkey begin
             mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
             if ret == MDB_NOTFOUND
                 d[key] = default
                 return default
@@ -146,7 +146,7 @@ function Base.get(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Typ
         GC.@preserve rkey begin
             mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
             if ret == MDB_NOTFOUND
                 default = f()
                 return default
@@ -165,7 +165,7 @@ function Base.get!(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Ty
         GC.@preserve rkey begin
             mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn.handle, dbi.handle, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
             if ret == MDB_NOTFOUND
                 default = f()
                 d[key] = default
