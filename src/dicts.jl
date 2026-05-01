@@ -87,11 +87,11 @@ end
 
 function Base.haskey(d::LMDBDict{K}, key) where K
     txn_dbi_do(d, readonly = true) do txn, dbi
-        rkey = toref(convert(K,key))
+        ckey = convert(K, key)
+        rkey = isbitstype(K) ? Ref(ckey) : ckey
         GC.@preserve rkey begin
-            mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, MDBValue(rkey), mdb_val_ref)
             if ret == MDB_NOTFOUND
                 return false
             elseif ret == Cint(0)
@@ -105,11 +105,11 @@ end
 
 function Base.get(d::LMDBDict{K,V}, key, default) where {K,V}
     txn_dbi_do(d, readonly = true) do txn, dbi
-        rkey = toref(convert(K,key))
+        ckey = convert(K, key)
+        rkey = isbitstype(K) ? Ref(ckey) : ckey
         GC.@preserve rkey begin
-            mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, MDBValue(rkey), mdb_val_ref)
             if ret == MDB_NOTFOUND
                 return default
             elseif ret == Cint(0)
@@ -123,11 +123,11 @@ end
 
 function Base.get!(d::LMDBDict{K,V}, key, default) where {K,V}
     txn_dbi_do(d, readonly = true) do txn, dbi
-        rkey = toref(convert(K,key))
+        ckey = convert(K, key)
+        rkey = isbitstype(K) ? Ref(ckey) : ckey
         GC.@preserve rkey begin
-            mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, MDBValue(rkey), mdb_val_ref)
             if ret == MDB_NOTFOUND
                 d[key] = default
                 return default
@@ -142,11 +142,11 @@ end
 
 function Base.get(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Type}}
     txn_dbi_do(d, readonly = true) do txn, dbi
-        rkey = toref(convert(K,key))
+        ckey = convert(K, key)
+        rkey = isbitstype(K) ? Ref(ckey) : ckey
         GC.@preserve rkey begin
-            mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, MDBValue(rkey), mdb_val_ref)
             if ret == MDB_NOTFOUND
                 default = f()
                 return default
@@ -161,11 +161,11 @@ end
 
 function Base.get!(f::F, d::LMDBDict{K,V}, key) where {K,V,F<:Union{Function, Type}}
     txn_dbi_do(d, readonly = true) do txn, dbi
-        rkey = toref(convert(K,key))
+        ckey = convert(K, key)
+        rkey = isbitstype(K) ? Ref(ckey) : ckey
         GC.@preserve rkey begin
-            mdb_key_ref = Ref(MDBValue(rkey))
             mdb_val_ref = Ref(MDBValue())
-            ret = mdb_get(txn, dbi, mdb_key_ref, mdb_val_ref)
+            ret = mdb_get(txn, dbi, MDBValue(rkey), mdb_val_ref)
             if ret == MDB_NOTFOUND
                 default = f()
                 d[key] = default
