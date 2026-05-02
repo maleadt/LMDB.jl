@@ -122,7 +122,7 @@ using Test, LMDB
             big = Csize_t(8) * 1024^3  # 8 GiB
             d = LMDBDict{String, Int64}(dir; mapsize=big, readers=42, dbs=4)
             @test d.env[:Readers] == 42
-            @test LMDB.info(d.env).me_mapsize == big
+            @test LMDB.info(d.env).mapsize == big
             d["x"] = 1
             @test d["x"] === Int64(1)
             close(d)

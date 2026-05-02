@@ -120,7 +120,7 @@ Base.IteratorSize(::Type{<:LMDBDict}) = Base.HasLength()
 
 function Base.length(d::LMDBDict)
     txn_dbi_do(d, readonly = true) do txn, dbi
-        Int(LMDB.stat(txn, dbi).ms_entries)
+        LMDB.stat(txn, dbi).entries
     end
 end
 
