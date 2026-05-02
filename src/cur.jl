@@ -419,13 +419,13 @@ end
 
 This function stores key/data pairs into the database. The cursor is positioned at the new item, or on failure usually near it.
 """
-function put!(cur::Cursor, key, val; flags::Cuint = zero(Cuint))
-    mdb_cursor_put(cur, key, val, flags)
+function put!(cur::Cursor, key, val; flags::Integer = zero(Cuint))
+    mdb_cursor_put(cur, key, val, Cuint(flags))
 end
 
 "Delete current key/data pair to which the cursor refers"
-function delete!(cur::Cursor; flags::Cuint = zero(Cuint))
-    mdb_cursor_del(cur, flags)
+function delete!(cur::Cursor; flags::Integer = zero(Cuint))
+    mdb_cursor_del(cur, Cuint(flags))
 end
 
 "Return count of duplicates for current key"

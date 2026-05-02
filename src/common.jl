@@ -1,5 +1,3 @@
-const EnvironmentFlags = Unsigned
-
 # Build an `MDB_val` (size + raw data pointer) from a heap-rooted Julia value.
 # The pointer is taken via `Base.unsafe_convert` — the same primitive ccall
 # uses internally to lower `Ref{T}`/`Vector{T}`/`String` arguments. The caller

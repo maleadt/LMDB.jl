@@ -24,14 +24,14 @@ isopen(txn::Transaction) = txn.handle != C_NULL
 `start` function creates a new transaction and returns `Transaction` object.
 It allows to set transaction flags with `flags` option.
 """
-function start(env::Environment; flags::Cuint=zero(Cuint),
+function start(env::Environment; flags::Integer=zero(Cuint),
                parent::Union{Transaction,Nothing} = nothing)
     txn_ref = Ref{Ptr{MDB_txn}}(C_NULL)
     p = parent === nothing ? C_NULL : parent
-    mdb_txn_begin(env, p, flags, txn_ref)
+    mdb_txn_begin(env, p, Cuint(flags), txn_ref)
     return Transaction(txn_ref[])
 end
-function start(f::Function, env::Environment; flags::EnvironmentFlags=Cuint(0))
+function start(f::Function, env::Environment; flags::Integer=zero(Cuint))
     txn = start(env, flags=Cuint(flags))
     try
         r = f(txn)
