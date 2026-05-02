@@ -1,8 +1,18 @@
 """
 A handle to a cursor structure for navigating through a database.
+
+A `Cursor` keeps a reference to its parent `Transaction` to expose it via
+`transaction(cur)` and to keep the txn alive under GC. The cursor's
+finalizer closes any still-open handle.
 """
 mutable struct Cursor
     handle::Ptr{MDB_cursor}
+    txn::Union{Transaction, Nothing}
+    function Cursor(txn::Union{Transaction, Nothing}, h::Ptr{MDB_cursor})
+        c = new(h, txn)
+        finalizer(close, c)
+        return c
+    end
 end
 
 Base.unsafe_convert(::Type{Ptr{MDB_cursor}}, c::Cursor) = c.handle
@@ -14,7 +24,7 @@ isopen(cur::Cursor) = cur.handle != C_NULL
 function open(txn::Transaction, dbi::DBI)
     cur_ptr_ref = Ref{Ptr{MDB_cursor}}(C_NULL)
     mdb_cursor_open(txn, dbi, cur_ptr_ref)
-    return Cursor(cur_ptr_ref[])
+    return Cursor(txn, cur_ptr_ref[])
 end
 
 "Wrapper of Cursor `open` for `do` construct"
@@ -40,12 +50,8 @@ function renew(txn::Transaction, cur::Cursor)
     mdb_cursor_renew(txn, cur)
 end
 
-"Return the cursor's transaction"
-function transaction(cur::Cursor)
-    txn_ptr = mdb_cursor_txn(cur)
-    (txn_ptr == C_NULL) && return nothing
-    return Transaction(txn_ptr)
-end
+"Return the cursor's transaction."
+transaction(cur::Cursor) = cur.txn
 
 "Return the cursor's database"
 function database(cur::Cursor)

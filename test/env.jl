@@ -80,6 +80,66 @@ module LMDB_Env
         @test_throws LMDBError Environment(joinpath(dir, "definitely_does_not_exist"))
     end
 
+    # Finalizers: an abandoned write txn must be aborted by GC so a later
+    # write txn doesn't block on LMDB's exclusive write mutex. If the
+    # finalizer doesn't fire, `start(env)` below would deadlock.
+    mktempdir() do dir
+        env = Environment(dir)
+        try
+            # Open a write txn and let it become unreachable without commit/abort.
+            let txn = start(env)
+                @test isopen(txn)
+            end
+            GC.gc(); GC.gc()
+            # If the finalizer aborted the abandoned txn, this succeeds.
+            txn2 = start(env)
+            try
+                dbi = open(txn2)
+                LMDB.put!(txn2, dbi, "k", "v")
+            finally
+                commit(txn2)
+            end
+        finally
+            close(env)
+        end
+    end
+
+    # Cursor finalizer: an abandoned cursor must be cleaned up so its
+    # parent txn can commit. (LMDB requires cursors on a write txn to be
+    # closed before commit; for read txns it's safer too.)
+    mktempdir() do dir
+        env = Environment(dir)
+        try
+            start(env) do txn
+                dbi = open(txn)
+                let cur = LMDB.open(txn, dbi)
+                    @test isopen(cur)
+                end  # cur out of scope
+                GC.gc(); GC.gc()
+                # If the finalizer ran, we can still use the txn.
+                LMDB.put!(txn, dbi, "k", "v")
+            end
+        finally
+            close(env)
+        end
+    end
+
+    # Parent refs: env(txn) and transaction(cur) return the actual parents.
+    mktempdir() do dir
+        env = Environment(dir)
+        try
+            start(env) do txn
+                @test LMDB.env(txn) === env
+                dbi = open(txn)
+                LMDB.open(txn, dbi) do cur
+                    @test LMDB.transaction(cur) === txn
+                end
+            end
+        finally
+            close(env)
+        end
+    end
+
     # reader_check / reader_list / copy
     mktempdir() do dir
         environment(dir) do env
