@@ -45,6 +45,36 @@ function Base.cconvert(::Type{Ptr{MDB_val}}, x::T) where {T}
     MDBArg(Ref(MDBValue(rx)), rx)
 end
 
+"""
+    mdb_unpack(::Type{T}, ref::Ref{MDB_val}) -> T
+
+Decode an `MDB_val` (size + raw `mv_data` pointer) into a Julia value of
+type `T`. Called by `tryget` / `get` / cursor accessors after a
+successful read. Default methods cover `String`, `Vector{E}` for any
+bitstype `E`, and any bitstype scalar; all of them copy out so the
+returned value is safe to keep past the producing transaction.
+
+This is the package's customization point for typed reads — analogous
+to heed's `BytesDecode<'txn>` trait. To plug in a custom value
+representation (e.g. skip a framing prefix, parse a tagged buffer,
+build a non-bitstype struct), define a method on a marker type:
+
+    struct PrefixedBlob end
+    function LMDB.mdb_unpack(::Type{PrefixedBlob}, ref::Ref{LMDB.MDB_val})
+        v = ref[]; sz = Int(v.mv_size)
+        sz < 8 && return UInt8[]
+        out = Vector{UInt8}(undef, sz - 8)
+        unsafe_copyto!(pointer(out),
+                       Ptr{UInt8}(v.mv_data) + 8, sz - 8)
+        out
+    end
+
+    LMDB.tryget(txn, dbi, key, PrefixedBlob)   # → Union{Vector{UInt8}, Nothing}
+
+The `mv_data` pointer is into LMDB's mmap and is only valid for the
+producing transaction's lifetime. Custom unpack methods must copy what
+they want to keep, exactly as the default `Vector{E}` method does.
+"""
 mdb_unpack(::Type{T}, mdb_val_ref::Ref{MDB_val}) where {T} = _mdb_unpack(T, mdb_val_ref[])
 function _mdb_unpack(::Type{T}, mdb_val::MDB_val) where {T <: String}
     unsafe_string(convert(Ptr{UInt8}, mdb_val.mv_data), mdb_val.mv_size)
