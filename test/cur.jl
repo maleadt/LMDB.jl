@@ -22,7 +22,11 @@ module LMDB_CUR
         try
             @test 0 == put!(cur, key+1, val*string(key+1))
             @test 0 == put!(cur, key, val*string(key))
-            @test issetequal(collect(keys(cur, typeof(key))), [11, 10])
+            ks = typeof(key)[]
+            LMDB.walk(cur) do k_ref, _
+                push!(ks, LMDB.mdb_unpack(typeof(key), k_ref))
+            end
+            @test issetequal(ks, [11, 10])
         finally
             close(cur)
             commit(txn)
@@ -34,17 +38,15 @@ module LMDB_CUR
     end
     @test !isopen(env)
 
-    # Block style
-    environment(dbname) do env # open environment
-        start(env) do txn # start transaction
-            open(txn) do dbi # open database
-                open(txn, dbi) do cur # open cursor
-                    curtxn = transaction(cur)
-                    @test curtxn.handle == txn.handle
-                    curdbi = database(cur)
-                    @test curdbi.handle == dbi.handle
-                    v = get(cur, key, String)
-                    println("Got value for key $(key): $(v)")
+    # Block style: parent accessors return the actual handles, not synthetic ones.
+    environment(dbname) do env
+        start(env) do txn
+            open(txn) do dbi
+                open(txn, dbi) do cur
+                    @test transaction(cur) === txn
+                    @test database(cur) === dbi
+                    @test LMDB.seek!(cur, key, typeof(key)) == key
+                    v = LMDB.value(cur, String)
                     @test val*string(key) == v
                 end
             end
@@ -84,21 +86,21 @@ module LMDB_CUR
                         # walk over everything
                         ks = String[]
                         LMDB.walk(cur) do k_ref, _
-                            push!(ks, LMDB.mbd_unpack(String, k_ref))
+                            push!(ks, LMDB.mdb_unpack(String, k_ref))
                         end
                         @test ks == ["a", "b", "c"]
 
                         # walk from a starting key
                         ks2 = String[]
                         LMDB.walk(cur; from="b") do k_ref, _
-                            push!(ks2, LMDB.mbd_unpack(String, k_ref))
+                            push!(ks2, LMDB.mdb_unpack(String, k_ref))
                         end
                         @test ks2 == ["b", "c"]
 
                         # walk from a key past the last entry — no callbacks.
                         ks3 = String[]
                         LMDB.walk(cur; from="z") do k_ref, _
-                            push!(ks3, LMDB.mbd_unpack(String, k_ref))
+                            push!(ks3, LMDB.mdb_unpack(String, k_ref))
                         end
                         @test isempty(ks3)
                     end
@@ -120,7 +122,7 @@ module LMDB_CUR
 
                         ks = String[]
                         LMDB.walk(cur) do k_ref, _
-                            push!(ks, LMDB.mbd_unpack(String, k_ref))
+                            push!(ks, LMDB.mdb_unpack(String, k_ref))
                         end
                         @test isempty(ks)
                     end

@@ -113,7 +113,7 @@ function _iter_step(::LMDBDict{K,V}, txn::Transaction, cur::Cursor,
         LMDB.abort(txn)
         throw(LMDBError(ret))
     end
-    return (LMDB.mbd_unpack(K, k_ref) => LMDB.mbd_unpack(V, v_ref), (txn, cur))
+    return (LMDB.mdb_unpack(K, k_ref) => LMDB.mdb_unpack(V, v_ref), (txn, cur))
 end
 
 Base.IteratorSize(::Type{<:LMDBDict}) = Base.HasLength()
@@ -203,6 +203,19 @@ function Base.pop!(d::LMDBDict{K,V}, k, default) where {K,V}
     end
 end
 
+# `pop!(d)` without a key — pops the first entry, mirroring `Base.pop!(::Dict)`.
+function Base.pop!(d::LMDBDict{K,V}) where {K,V}
+    txn_dbi_do(d) do txn, dbi
+        LMDB.open(txn, dbi) do cur
+            LMDB.seek!(cur, K) === nothing &&
+                throw(ArgumentError("LMDBDict must be non-empty"))
+            pair = LMDB.item(cur, K, V)
+            LMDB.delete!(cur)
+            return pair
+        end
+    end
+end
+
 function Base.empty!(d::LMDBDict)
     txn_dbi_do(d) do txn, dbi
         LMDB.drop(txn, dbi; delete = false)
@@ -228,7 +241,7 @@ function scan(d::LMDBDict{K,V}; prefix = UInt8[]) where {K,V}
     out = Pair{K,V}[]
     cursor_do(d, readonly = true) do cur
         _walk_prefix(cur, bprefix) do k_ref, v_ref
-            push!(out, mbd_unpack(K, k_ref) => mbd_unpack(V, v_ref))
+            push!(out, mdb_unpack(K, k_ref) => mdb_unpack(V, v_ref))
         end
     end
     return out
@@ -244,7 +257,7 @@ function scan_keys(d::LMDBDict{K}; prefix = UInt8[]) where K
     out = K[]
     cursor_do(d, readonly = true) do cur
         _walk_prefix(cur, bprefix) do k_ref, _
-            push!(out, mbd_unpack(K, k_ref))
+            push!(out, mdb_unpack(K, k_ref))
         end
     end
     return out
@@ -260,7 +273,7 @@ function scan_values(d::LMDBDict{K,V}; prefix = UInt8[]) where {K,V}
     out = V[]
     cursor_do(d, readonly = true) do cur
         _walk_prefix(cur, bprefix) do _, v_ref
-            push!(out, mbd_unpack(V, v_ref))
+            push!(out, mdb_unpack(V, v_ref))
         end
     end
     return out

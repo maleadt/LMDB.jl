@@ -45,18 +45,18 @@ function Base.cconvert(::Type{Ptr{MDB_val}}, x::T) where {T}
     MDBArg(Ref(MDBValue(rx)), rx)
 end
 
-mbd_unpack(::Type{T}, mdb_val_ref::Ref{MDB_val}) where {T} = _mbd_unpack(T, mdb_val_ref[])
-function _mbd_unpack(::Type{T}, mdb_val::MDB_val) where {T <: String}
+mdb_unpack(::Type{T}, mdb_val_ref::Ref{MDB_val}) where {T} = _mdb_unpack(T, mdb_val_ref[])
+function _mdb_unpack(::Type{T}, mdb_val::MDB_val) where {T <: String}
     unsafe_string(convert(Ptr{UInt8}, mdb_val.mv_data), mdb_val.mv_size)
 end
-function _mbd_unpack(::Type{V}, mdb_val::MDB_val) where {T, V <: Vector{T}}
+function _mdb_unpack(::Type{V}, mdb_val::MDB_val) where {T, V <: Vector{T}}
     # The MDB_val data points into the LMDB-owned mmap and is only valid for
     # the lifetime of the transaction. Copy out so the returned Vector owns
     # its memory and is safe to retain past commit/abort.
     src = unsafe_wrap(Array, convert(Ptr{UInt8}, mdb_val.mv_data), mdb_val.mv_size)
     copy(reinterpret(T, src))
 end
-function _mbd_unpack(::Type{T}, mdb_val::MDB_val) where {T}
+function _mdb_unpack(::Type{T}, mdb_val::MDB_val) where {T}
     unsafe_load(convert(Ptr{T}, mdb_val.mv_data))
 end
 
