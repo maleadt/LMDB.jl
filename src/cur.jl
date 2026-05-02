@@ -315,9 +315,10 @@ Walk every entry the cursor visits, calling
 starts at the first key (`MDB_FIRST`) when `from === nothing`, otherwise at
 the smallest key `>= from` (`MDB_SET_RANGE`).
 
-Inside `f`, `key_ref[]` and `val_ref[]` point into LMDB-owned memory and are
-valid only for the duration of the surrounding transaction; copy out anything
-you want to retain.
+Iteration stops when `f` returns `false` (any other return value, including
+`nothing`, continues). Inside `f`, `key_ref[]` and `val_ref[]` point into
+LMDB-owned memory and are valid only for the duration of the surrounding
+transaction; copy out anything you want to retain.
 """
 function walk(f, cur::Cursor; from = nothing)
     key_ref = Ref(MDBValue())
@@ -330,7 +331,7 @@ function walk(f, cur::Cursor; from = nothing)
                                                           MDB_SET_RANGE)
     end
     while iszero(ret)
-        f(key_ref, val_ref)
+        f(key_ref, val_ref) === false && return
         ret = unchecked_mdb_cursor_get(cur, key_ref, val_ref, MDB_NEXT)
     end
     ret == MDB_NOTFOUND && return
