@@ -1,7 +1,7 @@
 module LMDB
 
 import Base: open, close, getindex, setindex!, put!, pop!, replace!, reset,
-             isopen, count, delete!, keys, get, show, show, stat
+             isopen, count, delete!, keys, get, show, show, stat, copy
 import Base.Iterators: drop
 
 export
@@ -25,6 +25,7 @@ export
     # tier 2 — environment
     Environment, create, environment,
     sync, set!, unset!, info, stat, path, isopen, isflagset,
+    reader_check, reader_list,
 
     # tier 2 — transaction
     Transaction, start, abort, commit, reset, renew,
