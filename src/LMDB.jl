@@ -32,7 +32,7 @@ export
     Transaction, start, abort, commit, reset, renew,
 
     # tier 2 — database (DBI)
-    DBI, drop, get, put!, delete!, tryget, replace!,
+    DBI, drop, get, put!, put_reserved!, delete!, tryget, replace!,
 
     # tier 2 — cursor
     Cursor, count, transaction, database,
