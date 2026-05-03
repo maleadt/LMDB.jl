@@ -63,6 +63,9 @@ transaction(cur::Cursor) = cur.txn
 "Return the cursor's database."
 database(cur::Cursor) = cur.dbi
 
+Base.show(io::IO, cur::Cursor) =
+    print(io, "Cursor(", isopen(cur) ? "open" : "closed", ")")
+
 # Populate `key_ref` with `searchkey`'s data. Returns the heap-rooted argument
 # that must outlive the surrounding ccall (use `GC.@preserve`).
 @inline _setup_key!(key_ref, k::String)        = (key_ref[] = MDBValue(k); k)
