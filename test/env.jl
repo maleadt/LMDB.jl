@@ -128,6 +128,27 @@ module LMDB_Env
         end
     end
 
+    # Cursor finalizer is safe even after its parent txn has been
+    # explicitly committed: write-txn cursors are freed by the txn's
+    # commit per `lmdb.h`, so `mdb_cursor_close` afterwards would be UB.
+    # The defensive check in `close(::Cursor)` skips the LMDB call once
+    # the parent txn handle is gone.
+    mktempdir() do dir
+        env = Environment(dir)
+        try
+            txn = start(env)
+            dbi = open(txn)
+            cur = LMDB.open(txn, dbi)
+            LMDB.put!(txn, dbi, "k", "v")
+            commit(txn)             # invalidates write-txn cursors
+            @test !isopen(txn)
+            cur = nothing           # drop the binding
+            GC.gc(); GC.gc()        # finalizer should be a no-op
+        finally
+            close(env)
+        end
+    end
+
     # Parent refs: env(txn) and transaction(cur) return the actual parents.
     mktempdir() do dir
         env = Environment(dir)
