@@ -152,8 +152,8 @@ function setindex!(env::Environment, val::Integer, option::Symbol)
         # mdb_env_set_flags rejects those with EINVAL after the env is open.
         set!(env, Cuint(val))
     else
-        @warn("Cannot set $(string(option)) value")
-        Cint(0)
+        throw(ArgumentError("unknown environment option `:$(option)` " *
+            "(supported: :Readers, :MapSize, :DBs, :Flags)"))
     end
     val
 end
@@ -178,7 +178,8 @@ function getindex(env::Environment, option::Symbol)
     elseif option == :KeySize
         value[] = mdb_env_get_maxkeysize(env)
     else
-        @warn("Cannot get $(string(option)) value")
+        throw(ArgumentError("unknown environment option `:$(option)` " *
+            "(supported: :Flags, :Readers, :KeySize)"))
     end
     return value[]
 end

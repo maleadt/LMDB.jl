@@ -34,6 +34,10 @@ module LMDB_Env
     @test isflagset(env[:Flags], Cuint(LMDB.MDB_NOSYNC))
     unset!(env, LMDB.MDB_NOSYNC)
 
+    # Unknown options error instead of silently warning + returning bogus values.
+    @test_throws ArgumentError env[:Bogus] = 1
+    @test_throws ArgumentError env[:Bogus]
+
     # open db
     isdir(dbname) || mkdir(dbname)
     try
