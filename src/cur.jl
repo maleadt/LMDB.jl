@@ -7,10 +7,9 @@ txn alive under GC. The cursor's finalizer closes any still-open handle.
 """
 mutable struct Cursor
     handle::Ptr{MDB_cursor}
-    txn::Union{Transaction, Nothing}
-    dbi::Union{DBI, Nothing}
-    function Cursor(txn::Union{Transaction, Nothing},
-                    dbi::Union{DBI, Nothing}, h::Ptr{MDB_cursor})
+    txn::Transaction
+    dbi::DBI
+    function Cursor(txn::Transaction, dbi::DBI, h::Ptr{MDB_cursor})
         c = new(h, txn, dbi)
         finalizer(close, c)
         return c
