@@ -3,25 +3,28 @@ import LMDB.MDBValueIO
 using LMDB
 using Test
 
-    @test LMDB.version()[1] >= v"0.9.15"
+@testset "common" begin
 
-    # LMDBError
-    ex = LMDBError(Cint(0))
-    @test_throws LMDBError throw(ex)
-    @test ex.code == 0
+@test LMDB.version()[1] >= v"0.9.15"
 
-    # `MDBValueIO` is the package's typed-read extension point. Each
-    # block below packs a Julia value into an `MDB_val` via `MDBValue`,
-    # then round-trips it through `read(MDBValueIO(...), T)` to verify
-    # that the default decoders match the encoded byte image.
+# LMDBError
+ex = LMDBError(Cint(0))
+@test_throws LMDBError throw(ex)
+@test ex.code == 0
 
-    # String → unsafe_string over the full buffer.
-    val = "abcd"
+# `MDBValueIO` is the package's typed-read extension point. Each
+# block below packs a Julia value into an `MDB_val` via `MDBValue`,
+# then round-trips it through `read(MDBValueIO(...), T)` to verify
+# that the default decoders match the encoded byte image.
+
+# String → unsafe_string over the full buffer.
+let val = "abcd"
     mdb_val_ref = Ref(MDBValue(val))
     @test val == read(MDBValueIO(mdb_val_ref[]), String)
+end
 
-    # Vector{Int} → reinterpret + copy, owns its memory.
-    val = [1233]
+# Vector{Int} → reinterpret + copy, owns its memory.
+let val = [1233]
     T = eltype(val)
     val_size = sizeof(val)
     mdb_val_ref = Ref(MDBValue(val))
@@ -31,9 +34,10 @@ using Test
     value = unsafe_wrap(Array, convert(Ptr{T}, mdb_val.mv_data), nvals)
     @test val == value
     @test val == read(MDBValueIO(mdb_val_ref[]), Vector{Int})
+end
 
-    # Vector{UInt16} → same, with non-Int element type.
-    val = [0x0003, 0xff45]
+# Vector{UInt16} → same, with non-Int element type.
+let val = [0x0003, 0xff45]
     val_size = sizeof(val)
     T = eltype(val)
     mdb_val_ref = Ref(MDBValue(val))
@@ -43,15 +47,16 @@ using Test
     value = unsafe_wrap(Array, convert(Ptr{T}, mdb_val.mv_data), nvals)
     @test val == value
     @test val == read(MDBValueIO(mdb_val_ref[]), Vector{UInt16})
+end
 
-    # Bitstype scalar inside a one-element vector → single-element
-    # decode via the `Vector{T}` overload, plus a primitive scalar
-    # decode (Base.read fall-through, Ref-allocating).
-    struct TestType
-        i::Int
-        j::Char
-    end
-    val = TestType(1,'a')
+# Bitstype scalar inside a one-element vector → single-element
+# decode via the `Vector{T}` overload, plus a primitive scalar
+# decode (Base.read fall-through, Ref-allocating).
+struct TestType
+    i::Int
+    j::Char
+end
+let val = TestType(1, 'a')
     val_size = sizeof(val)
     T = typeof(val)
     @test_throws MethodError MDBValue(val)
@@ -63,9 +68,10 @@ using Test
     value = unsafe_wrap(Array, convert(Ptr{T}, mdb_val.mv_data), nvals)
     @test val == value
     @test val == read(MDBValueIO(mdb_val_ref[]), Vector{T})
+end
 
-    # Position / seek / skip primitives.
-    bytes = collect(0x01:0x08)
+# Position / seek / skip primitives.
+let bytes = collect(0x01:0x08)
     mdb_val_ref = Ref(MDBValue(bytes))
     io = MDBValueIO(mdb_val_ref[])
     @test position(io) == 0
@@ -80,3 +86,6 @@ using Test
     seekend(io)
     @test eof(io)
     @test_throws EOFError read(io, UInt8)
+end
+
+end  # @testset "common"
